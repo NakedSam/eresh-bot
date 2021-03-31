@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+#Media files
+*.mp4
+
+#Options file
+op_list.txt
+unavailable_op_ed.txt
