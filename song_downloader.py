@@ -21,7 +21,7 @@ for line in op_list_lines:
   address = line_splitted[1].strip()
   op_ed = line_splitted[3].strip()
   filename = name + " - " + op_ed
-
+  #ADD SUPPORT FOR TIMECODES
   #Tries to download the song
   try:   
     yt = YouTube(address)
