@@ -134,3 +134,13 @@ dmypy.json
 #Options file
 op_list.txt
 unavailable_op_ed.txt
+pyvenv.cfg
+
+#Folders to exclude
+songs/
+eresh/
+
+#Files to Exclude
+lib64
+launch.json
+settings.json

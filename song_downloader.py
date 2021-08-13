@@ -13,6 +13,7 @@ try:
 except:
   print("Erreur lors de la gestion du fichier d'OP/ED")
 
+print(op_list_lines)
 #Download every anime in the list
 for line in op_list_lines:
   #Split the data received from the file into name, address and the number of OP/ED
