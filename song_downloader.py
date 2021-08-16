@@ -1,6 +1,3 @@
-import os
-import shutil
-
 from pytube import YouTube
 from pytube import Playlist
 from pytube.exceptions import VideoUnavailable
@@ -18,7 +15,7 @@ print(op_list_lines)
 for line in op_list_lines:
   #Split the data received from the file into name, address and the number of OP/ED
   line_splitted = line.split("><")
-  name = line_splitted[0].strip()
+  name = line_splitted[0].strip().replace("/", " ")
   address = line_splitted[1].strip()
   op_ed = line_splitted[3].strip()
   filename = name + " - " + op_ed
@@ -28,7 +25,7 @@ for line in op_list_lines:
     yt = YouTube(address)
     print("Téléchargement de " + filename)  
     yt.streams.filter(only_audio=True).first().download(filename=filename, output_path="./songs")
-  #If the video is unavailable, note the unavailable song in a file
+  #If the video is unavailable, note the unavailable song in a file with a datetime
   except VideoUnavailable:
     unavailable_op_ed_file = open("./unavailable_op_ed.txt","a+")
     formatted_date = str(datetime.now().day) + "/" + str(datetime.now().month) + "/" + str(datetime.now().year)

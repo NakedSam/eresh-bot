@@ -1,9 +1,6 @@
 import asyncio
 import aiomysql
 import os
-from dotenv import load_dotenv
-
-load_dotenv(".env")
 
 class Playlist:
   def __init__(self, bot, playlist={}):
@@ -23,6 +20,7 @@ class Playlist:
         await cur.execute("SELECT * FROM er_bt_songs")
         r = await cur.fetchall()
         print(r)
+        
     conn.close()
 
     await ctx.send("Test")

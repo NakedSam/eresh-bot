@@ -80,8 +80,8 @@ CREATE TABLE IF NOT EXISTS `er_servers_table`
     id_server INT NOT NULL AUTO_INCREMENT,
     server_id INT UNIQUE NOT NULL,
     server_name VARCHAR(255) NOT NULL,
-    server_btChannel INT,
-    server_newsChannel INT,
+    server_btChannel VARCHAR(255),
+    server_newsChannel VARCHAR(255),
     server_usesNews BOOLEAN DEFAULT 0,
     server_usesBlindtest BOOLEAN DEFAULT 0,
 

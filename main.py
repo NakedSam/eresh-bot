@@ -8,15 +8,25 @@ import functions
 from classes import prompt
 from functions import database
 
-from dotenv import load_dotenv
 from discord.ext import commands, tasks
+
+CREDENTIALS_PATH = "./credentials.json"
+
+credentials = None
+
+with open(CREDENTIALS_PATH) as f:
+    credentials = json.load(f)
+
+dbCredentials = {
+    "user": credentials["dbUser"],
+    "password": credentials["dbPass"]
+}
 
 if __name__ == "__main__":
     description="```Un bot multifonction```"
     intents = discord.Intents.default()
     intents.members = True
 
-    load_dotenv(".env")
     bot = commands.Bot(command_prefix="$", description=description, intents=intents)
 
 
@@ -31,8 +41,9 @@ if __name__ == "__main__":
         print("Eresh est prête Master !")
         bot.blindtests = {}
         bot.ongoingBlindtestPrompts = {}
-        bot.promptsList = []
-
+        bot.blindtestPromptsDict = {}
+        bot.blindtestPromptMessagesDict = {}
+        bot.blindtestChannelChoicePromptsDict = {}
 
     @bot.command(name="hi", aliases=["hello", "salut"])
     async def _hi(ctx):
@@ -46,43 +57,60 @@ if __name__ == "__main__":
     async def _blindtest(ctx):
         """
         Prépare un blind test
-        """    
+        """
+            
         #Starts a new connection to the database
         blindtestLoop = asyncio.get_event_loop()
+
+        blindtestRequest = f"SELECT server_btChannel FROM {bot.databaseStructure['serversTable']} WHERE server_id='{ctx.guild.id}'"
         #We check if there's already the server in the list by making a request to the database
-        blindtestRequest = f"SELECT * FROM {bot.databaseStructure['serversTable']}"
-        serverRow = await database.executeRequest(
+        selectResponse = await database.select(
             loop=blindtestLoop, 
             request=blindtestRequest, 
-            database=bot.databaseStructure["serversDatabase"]
+            database=bot.databaseStructure["serversDatabase"],
+            credentials=dbCredentials
         )
-        
-        #If it's the case, we check if there's already a blind test channel, if not, we ask someone to choose it
+
+        #If there's no server returned or the server doesn't have an channel id for the blindtest, 
+        #it means they haven't picked a blind test channel yet so we ask them to
+        if selectResponse == None or selectResponse[0][0] :
+            channelChoicePrompt = prompt.Prompt(
+                bot=bot,
+                guildId=ctx.guild.id,
+                descriptions=[bot.prompts["blindtestChoicePrompt"]],
+                emojisLists=["1️⃣", "2️⃣", "🚫"],
+                promptType="blindtestChannelChoice",
+                channel=ctx.channel,
+                functions=(None)
+            )
+
+            #channelChoiceMessage = await channelChoicePrompt.showPrompt()
 
         #If we have an ongoing blindtest, we mention that a blind test is already ongoing
-        if(
-            ctx.guild.id in bot.blindtests and 
-            "ongoingBlindtest" in bot.blindtests[ctx.guild.id] and 
-            bot.blindtests[ctx.guild.id]["ongoingBlindtest"] == True
-        ):
-            await ctx.channel.send("Un blind test est déjà en cours !")
+        if ctx.guild.id in bot.blindtests and bot.blindtests["ongoingBlindtest"]:
+            await ctx.channel.send("Un blind test est déjà en cours !")           
         #Else we start the prompts chain and we set the blindtest as ongoing as well as putting the prompt
         else:
-            bt_prompt = prompt.Prompt(
+            btPrompt = prompt.Prompt(
                 bot=bot, 
                 guildId=ctx.guild.id, 
-                descriptions=[bot.prompts["blindtestModePrompt"]], 
-                functions=[None],
+                descriptions=[bot.prompts["blindtestModePrompt"]],
                 emojisLists=[["1️⃣", "2️⃣", "3️⃣", "🚫"]], 
                 promptType="blindtest",
-                channel=ctx.channel
+                channel=ctx.channel,
+                functions=(None)
             )
 
             bot.blindtests[ctx.guild.id] = {"ongoingBlindtest" : True}
-            bot.ongoingBlindtestPrompts[ctx.guild.id] = {"prompt" : bt_prompt}
-            bot.promptsList.append(bt_prompt)
 
-            await bt_prompt.showPrompt()
+            promptMessage = await btPrompt.showPrompt()
+            #We create the prompt and add it to the prompts dictionnary stored on the bot
+            blindtestPromptToAdd = {
+                "prompt": btPrompt   
+            }
+
+            bot.blindtestPromptsDict[promptMessage.guild.id] = blindtestPromptToAdd
+            bot.blindtestPromptMessagesDict[promptMessage.id] = promptMessage.id
 
     #When a reaction is added, we perform some checks
     @bot.event
@@ -90,10 +118,8 @@ if __name__ == "__main__":
         #If it's the bot reaction, we do nothing
         if(self.member == bot.user):
             return
-        #If the message is the same as the blindTestPrompt, we check if it's a valid reaction
-        if(self.message_id == bot.ongoingBlindtestPrompts[self.guild_id]["prompt"].message.id and self.guild_id in bot.ongoingBlindtestPrompts.keys() ):
-            if await bot.ongoingBlindtestPrompts[self.guild_id]["prompt"].checkReactionValidity(self.emoji.name):
-                await bot.get_channel(self.channel_id).send("Valide !")
-                await bot.ongoingBlindtestPrompts[self.guild_id]["prompt"].useFunction()
+        #If the message is not in the 
+        if not self.message.id in bot.blindtestPromptsDict:
+            return
 
-    bot.run(os.getenv("TOKEN"))
+    bot.run(credentials["token"])
