@@ -11,7 +11,7 @@ class Prompt:
     #functions      : A tuple containing in order, the functions to use
     #message        : The message with the prompt
     def __init__(self, bot, guildId, descriptions, emojisLists, promptType, channel, functions, 
-        promptStage=0, message=None, lastChoice=None):
+        promptStage=0, message=None):
 
         self.bot = bot
         self.guildId = guildId    
@@ -19,16 +19,16 @@ class Prompt:
         self.emojisLists = emojisLists
         self.promptType = promptType
         self.channel = channel
+        self.functions = functions
         self.promptStage = promptStage
         self.message = message
-        self.lastChoice = lastChoice
 
     async def showPrompt(self):
         #We set the embed for the questions related to the blindtest mode
         embed = discord.Embed()
 
         embed.set_author(name=self.bot.user.name)
-        embed.add_field(name="Choix 1", value=self.descriptions[self.promptStage], inline=False)
+        embed.add_field(name="Choix", value=self.descriptions[self.promptStage], inline=False)
         
         self.message = await self.channel.send(embed=embed)
 
@@ -36,14 +36,21 @@ class Prompt:
         for emoji in self.emojisLists[self.promptStage]:
             await self.message.add_reaction(emoji)
 
-        #Return the messsage
         return self.message
         
-    #reaction : The emoji as a string representing the name
-    async def checkReactionValidity(self, reaction):
+    async def checkReactionValidity(self, emoji):
       isValid = False
 
-      if (reaction in self.emojisLists[self.promptStage]):
+      if (emoji in self.emojisLists[self.promptStage].values()):
         isValid = True
       
       return isValid
+
+    #emoji : The emoji reaction that has been added to the prompt message
+    async def runFunction(self, emoji):
+        if self.promptStage < len(self.descriptions) - 1:
+            self.functions[self.promptStage](self, emoji)
+        else:
+            return
+            
+

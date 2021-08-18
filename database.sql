@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `er_bt_logs`
     bt_blindtestNumber INT NOT NULL DEFAULT 0,
     bt_playerScore INT NOT NULL,
     bt_type VARCHAR(50),
-    bt_playerResponseTimes TEXT,
+    bt_playerResponseTime FLOAT,
     bt_server VARCHAR(255) NOT NULL,
 
     PRIMARY KEY(id_bt),
@@ -78,7 +78,7 @@ USE `er_servers`;
 CREATE TABLE IF NOT EXISTS `er_servers_table`
 (
     id_server INT NOT NULL AUTO_INCREMENT,
-    server_id INT UNIQUE NOT NULL,
+    server_id VARCHAR(255) UNIQUE NOT NULL,
     server_name VARCHAR(255) NOT NULL,
     server_btChannel VARCHAR(255),
     server_newsChannel VARCHAR(255),

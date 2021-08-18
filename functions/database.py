@@ -41,3 +41,12 @@ async def select(loop, request, database, credentials, args=None):
     except Exception as e:
         print(e)
         print("Une erreur est arrivée avec la bdd lors d'un SELECT !")
+
+async def executeRequest(loop, request, database, credentials, args=None):
+    if request.startswith("SELECT"):
+        await select(loop, request, database, credentials, args)
+    else:
+        raise RequestTypeError("Type de requête non supporté")
+
+class RequestTypeError(TypeError):
+    '''The SQL Request is of an unknown type'''

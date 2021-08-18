@@ -1,4 +1,4 @@
 {
     "blindtestModePrompt": "Quel mode désirez-vous ? \n :one: **Original** (Seulement le plus rapide gagne des points) \n :two: **Performance** (Chaque joueur est récompensé pour sa vitesse) \n :three: **Détente** (Tant que le joueur répond correctement, il a un point, peu importe sa vitesse)\n :no_entry_sign: Annuler",
-    "blindtestChoicePrompt": "Je vois que vous n'avez pas encore choisi de salon pour afficher les blindtests, voulez-vous choisir celui-ci ?"
+    "blindtestChoicePrompt": "Je vois que vous n'avez pas encore choisi de salon pour afficher les blindtests, voulez-vous choisir celui-ci ?\n OUI : :white_check_mark:\nNON : :x:"
 }
