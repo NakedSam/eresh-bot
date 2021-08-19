@@ -65,7 +65,10 @@ if __name__ == "__main__":
         """
         Prépare un blind test
         """
-            
+        #Initialize the blindtest as not ongoing if it doesn't exist already
+        if not ctx.guild.id in bot.blindtests.keys():
+            bot.blindtests[ctx.guild.id] = {"ongoingBlindtest": False}
+
         #Starts a new connection to the database
         blindtestLoop = asyncio.get_event_loop()
 
@@ -78,7 +81,6 @@ if __name__ == "__main__":
                 database=bot.databaseStructure["serversDatabase"],
                 credentials=dbCredentials
             )
-            print(selectResponse)
         except Exception as e:
             print(e)
             return
@@ -86,7 +88,19 @@ if __name__ == "__main__":
 
         #If there's no server returned or the server doesn't have an channel id for the blindtest, 
         #it means they haven't picked a blind test channel yet so we ask them to
-        if selectResponse == None or not selectResponse[0][0] == ctx.guild.id:
+        try:
+            print(bot.blindtests[ctx.guild.id]["ongoingBlindtest"])
+        except KeyError as e:
+            print(e)
+            pass
+        print(f" selectResponse == None : {selectResponse == None}")
+        print(f"selectResponse[0][0] == ctx.guild.id : {selectResponse[0][0] == ctx.guild.id}")
+        if ctx.guild.id in bot.blindtests.keys():
+            print(f"bot.blindtests[ctx.guild.id]['ongoingBlindtest'] : {bot.blindtests[ctx.guild.id]['ongoingBlindtest']}")
+        if selectResponse == None or not selectResponse[0][0] == ctx.guild.id and not bot.blindtests[ctx.guild.id]["ongoingBlindtest"]:
+            #We activate the blindtest
+            bot.blindtests[ctx.guild.id] = {"ongoingBlindtest" : True}  
+
             channelChoicePrompt = prompt.Prompt(
                 bot=bot,
                 guildId=ctx.guild.id,
@@ -94,16 +108,16 @@ if __name__ == "__main__":
                 emojisLists=[[bot.emojisDict["whiteCheckMark"], bot.emojisDict["crossMark"]]],
                 promptType="blindtestChannelChoice",
                 channel=ctx.channel,
-                functions=(None)
+                functions=(None, blindtest.blindtestChannelChoiceFunc)
             )
             
             blindtestChannelChoiceMessage = await channelChoicePrompt.showPrompt()
             blindtestChannelChoicePromptToAdd = {
-                "prompt": blindtestChannelChoiceMessage
+                "prompt": channelChoicePrompt
             }
-
-            bot.blindtestChannelChoicePromptsDict[blindtestChannelChoiceMessage.id] = blindtestChannelChoiceMessage.id
-            bot.blindtestChannelChoicePromptMessagesDict[blindtestChannelChoiceMessage.id] = blindtestChannelChoicePromptToAdd
+            #We store the prompt and the message id in bot stored variables
+            bot.blindtestChannelChoicePromptMessagesDict[ctx.guild.id] = blindtestChannelChoicePromptToAdd
+            bot.blindtestChannelChoicePromptsDict[blindtestChannelChoiceMessage.id] = blindtestChannelChoiceMessage.id    
         else:
             #If we have an ongoing blindtest, we mention that a blind test is already ongoing
             if ctx.guild.id in bot.blindtests and bot.blindtests["ongoingBlindtest"]:
@@ -117,9 +131,9 @@ if __name__ == "__main__":
                     emojisLists=[[bot.emojisDict["whiteCheckMark"], bot.emojisDict["crossMark"]]], 
                     promptType="blindtest",
                     channel=ctx.channel,
-                    functions=(None, )
+                    functions=(None)
                 )
-
+                #We activate the blindtest
                 bot.blindtests[ctx.guild.id] = {"ongoingBlindtest" : True}
 
                 promptMessage = await btPrompt.showPrompt()
@@ -134,20 +148,29 @@ if __name__ == "__main__":
 
     #When a reaction is added, we perform some checks
     @bot.event
-    async def on_raw_reaction_add(self, payload=discord.RawReactionActionEvent):     
+    async def on_raw_reaction_add(payload):   
         #If it's the bot reaction, we do nothing
-        if(self.member == bot.user):
+        if(payload.member.bot):
             return
+        
         #If the message is in the blindtestPrompts, we launch the next section of the blindtest
-        if self.message_id in bot.blindtestPromptMessagesDict:
+        if payload.message_id in bot.blindtestPromptMessagesDict:
             #If the emoji is not in the prompt emoji list for this prompt stage, we do nothing
-            if not bot.blindtestPromptsDict[self.guild_id]["prompt"].checkReactionValidity(self.emoji):
+            if not bot.blindtestPromptsDict[payload.guild_id]["prompt"].checkReactionValidity(payload.emoji):
                 return
-            #Else we pass to the next steps
-            bot.blindtestPromptsDict[self.guild_id]["prompt"].promptStage += 1
-            bot.blindtestPromptsDict[self.guild_id]["prompt"].runFunction(self.emoji)
-        elif self.message_id in bot.blindtestChannelChoicePromptsDict:
-            #CRÉER LE FONCTIONNEMENT PROGRAMMAL
+            #Else we pass to the next step
+            bot.blindtestPromptsDict[payload.guild_id]["prompt"].promptStage += 1
+            bot.blindtestPromptsDict[payload.guild_id]["prompt"].runFunction(payload.emoji)
+        #If the if of the prompt is in the dictionnary of prompts
+        elif payload.message_id in bot.blindtestChannelChoicePromptsDict.values():
+            #We check the validity of the emoji or if we're currently processing a prompt
+            if not await bot.blindtestChannelChoicePromptMessagesDict[payload.guild_id]["prompt"].checkReactionValidity(payload.emoji) or \
+                bot.blindtestChannelChoicePromptMessagesDict[payload.guild_id]["prompt"].isOngoing:
+                return
+            #Else we pass to the next step
+            bot.blindtestChannelChoicePromptMessagesDict[payload.guild_id]["prompt"].promptStage += 1
+            bot.blindtestChannelChoicePromptMessagesDict[payload.guild_id]["prompt"].isOngoing = True
+            await bot.blindtestChannelChoicePromptMessagesDict[payload.guild_id]["prompt"].runFunction(payload.emoji)
             return
 
     bot.run(credentials["token"])

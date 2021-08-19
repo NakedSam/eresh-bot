@@ -10,8 +10,9 @@ class Prompt:
     #channel        : A string reprensentin the channel to send the message
     #functions      : A tuple containing in order, the functions to use
     #message        : The message with the prompt
+    #ongoing        : A boolean representing whether or not we're currently running a function (This blocks additional reactions while processing)
     def __init__(self, bot, guildId, descriptions, emojisLists, promptType, channel, functions, 
-        promptStage=0, message=None):
+        promptStage=0, message=None, isOngoing=False):
 
         self.bot = bot
         self.guildId = guildId    
@@ -22,6 +23,7 @@ class Prompt:
         self.functions = functions
         self.promptStage = promptStage
         self.message = message
+        self.isOngoing = isOngoing
 
     async def showPrompt(self):
         #We set the embed for the questions related to the blindtest mode
@@ -37,20 +39,18 @@ class Prompt:
             await self.message.add_reaction(emoji)
 
         return self.message
-        
+    
+    #Check if the reaction is in the emojis list for this prompt stage
     async def checkReactionValidity(self, emoji):
-      isValid = False
-
-      if (emoji in self.emojisLists[self.promptStage].values()):
-        isValid = True
-      
-      return isValid
+        isValid = False
+        
+        if (str(emoji) in self.emojisLists[self.promptStage]):
+            isValid = True
+        
+        return isValid
 
     #emoji : The emoji reaction that has been added to the prompt message
     async def runFunction(self, emoji):
-        if self.promptStage < len(self.descriptions) - 1:
-            self.functions[self.promptStage](self, emoji)
-        else:
-            return
+        await self.functions[self.promptStage](self, emoji)
             
 
